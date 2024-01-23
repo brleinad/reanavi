@@ -1,0 +1,37 @@
+{
+  "name": "reanavi",
+  "version": "1.0.0",
+  "description": "graph your react native navigation",
+  "main": "index.ts",
+  "scripts": {
+    "do": "ts-node src/index.ts",
+    "start": "nodemon --watch 'src/**/*.ts' --exec 'ts-node src/index.ts'",
+    "build": "tsc -p ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brleinad/reanavi.git"
+  },
+  "keywords": [
+    "react",
+    "native",
+    "navigation"
+  ],
+  "author": "brleinad",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/brleinad/reanavi/issues"
+  },
+  "homepage": "https://github.com/brleinad/reanavi#readme",
+  "dependencies": {
+    "@types/node": "^20.11.5",
+    "commander": "^11.1.0",
+    "fs": "^0.0.1-security",
+    "typescript": "^5.3.3"
+  },
+  "devDependencies": {
+    "@commander-js/extra-typings": "^11.1.0",
+    "nodemon": "^3.0.3",
+    "ts-node": "^10.9.2"
+  }
+}
