@@ -9,8 +9,7 @@ const program = new Command()
 program.parse(process.argv);
 const options = program.opts();
 
-// TODO:
-// find all navigate or replace and create map of file name -> list of file names it navigates to
+// TODOs:
 // find the one file that doesn't get navigated to: ie for all the file names the one that doesn't show up in any of the lists of the map
 // given that root file use as the root for the graph and build the graph
 // traverse the graph and print it
@@ -18,12 +17,22 @@ const options = program.opts();
 async function main(directoryPath: string) {
   const files = await getSourceFiles(directoryPath);
   const nav2component = await generateMapNavigationName2ComponentName(files);
-  console.log(nav2component);
   const component2File = await generateMapComponentName2FileName(
     files,
     Array.from(nav2component.values()),
   );
-  console.log(component2File);
+
+  const nav2file: Map<string, string> = combineMaps(
+    nav2component,
+    component2File,
+  );
+
+  console.log("nav2component: ", nav2component.size);
+  console.log("component2File: ", component2File.size);
+  console.log("nav2file: ", nav2file.size);
+
+  const navs = await findAllNavigates(files, nav2file);
+  console.log(navs);
 }
 
 main(options.directory || ".");
@@ -63,7 +72,6 @@ async function generateMapNavigationName2ComponentName(
   return navigationName2Component;
 }
 
-// import { OnboardingNavigator } from './Onboarding/Onboarding.navigator';
 async function generateMapComponentName2FileName(
   files: string[],
   componentNames: string[],
@@ -79,7 +87,7 @@ async function generateMapComponentName2FileName(
       );
       match = regexPattern.exec(fileContent);
       if (match) {
-        map.set(componentName, file);
+        map.set(componentName, path.basename(file));
       }
     }
   }
@@ -87,29 +95,44 @@ async function generateMapComponentName2FileName(
   return map;
 }
 
-// async function get
+function combineMaps(
+  a2b: Map<string, string>,
+  b2c: Map<string, string>,
+): Map<string, string> {
+  const a2c = new Map<string, string>();
 
-// function getNavigations(files: string[]) {
-//   files.forEach((file) => {
-//     fs.readFile(file, { encoding: "utf8" }, (error, fileContent) => {
-//       if (error) {
-//         console.error(`Error reading file: ${error}`);
-//         return;
-//       }
-//       const regexPattern = /(navigate|replace)\('([^']+)'\)/g;
-//       // const match = fileContent.match(regexPattern);
+  for (const [aKey, bValue] of a2b) {
+    if (b2c.has(bValue)) {
+      a2c.set(aKey, b2c.get(bValue)!);
+    }
+  }
 
-//       let match;
-//       do {
-//         match = regexPattern.exec(fileContent);
-//         if (match) {
-//           const matchedBlob = match[2];
-//           console.log(`${path.basename(file)} -> ${matchedBlob}`);
-//         }
-//       } while (match);
-//     });
-//   });
-// }
+  return a2c;
+}
+
+async function findAllNavigates(
+  files: string[],
+  nav2file: Map<string, string>,
+): Promise<Map<string, string[]>> {
+  const file2file: Map<string, string[]> = new Map();
+  for (const file of files) {
+    const fileContent = await fs.readFile(file, { encoding: "utf8" });
+    let match;
+    const regexPattern = /(navigate|replace)\('([^']+)'\)/g;
+    while ((match = regexPattern.exec(fileContent)) !== null) {
+      const navigationToFiles = file2file.get(path.basename(file)) ?? [];
+      if (match) {
+        const navigationName = match[2];
+        const fileNameForNavigationName = nav2file.get(navigationName);
+        if (fileNameForNavigationName) {
+          navigationToFiles.push(fileNameForNavigationName);
+          file2file.set(path.basename(file), navigationToFiles);
+        }
+      }
+    }
+  }
+  return file2file;
+}
 
 type Node = {
   name: string;
