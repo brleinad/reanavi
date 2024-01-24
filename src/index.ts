@@ -26,15 +26,23 @@ async function main(directoryPath: string) {
     component2File,
   );
 
-  console.log("nav2component: ", nav2component.size);
-  console.log("component2File: ", component2File.size);
+  // console.log("nav2component: ", nav2component.size);
+  // console.log("component2File: ", component2File.size);
   console.log("nav2file: ", nav2file.size);
 
   const navs = await findAllNavigates(files, nav2file);
   console.log(navs);
 
   const roots = findRoots(navs);
-  console.log("ROOTS: ", roots);
+  // console.log("ROOTS: ", roots);
+
+  // const graphs = [];
+  for (const root of roots) {
+    // graphs.push(buildGraph(root));
+    const path = findNavigationPath(navs, root, new Set());
+    console.log("Path:", path.join(" \n  -> "));
+  }
+  // console.log("GRAPHS:", graphs);
 }
 
 main(options.directory || ".");
@@ -59,7 +67,6 @@ async function generateMapNavigationName2ComponentName(
   for (const file of files) {
     const fileContent = await fs.readFile(file, { encoding: "utf8" });
     let match;
-    // options={{ headerShown: false }}
     const regexPattern =
       /.*(Stack\.Screen)\s+name="([a-zA-Z0-9_]+)"\s?(options=.*)?\s+component=\{([a-zA-Z0-9_]+)\}/g;
     do {
@@ -85,7 +92,7 @@ async function generateMapComponentName2FileName(
     for (const componentName of componentNames) {
       let match;
       const regexPattern = new RegExp(
-        `export\\s+const\\s+(${componentName})\\:\\s+React\\.FC`,
+        `export\\s+(const|function)\\s+(${componentName})(\\:\\s+React\\.FC)?`,
         "g",
       );
       match = regexPattern.exec(fileContent);
@@ -137,10 +144,6 @@ async function findAllNavigates(
   return file2file;
 }
 
-type Node = {
-  name: string;
-  neighbour: Node[];
-};
 function findRoots(navs: Map<string, string[]>): string[] {
   const roots: string[] = [];
   const allLeaves: string[] = Array.from(navs.values()).reduce(
@@ -154,4 +157,27 @@ function findRoots(navs: Map<string, string[]>): string[] {
     }
   }
   return roots;
+}
+
+function findNavigationPath(
+  navs: Map<string, string[]>,
+  start: string,
+  visited: Set<string>,
+  path: string[] = [],
+  longestPath: string[] = [],
+): string[] {
+  visited.add(start);
+  path.push(start);
+
+  const neighbors = navs.get(start) || [];
+  for (const neighbor of neighbors) {
+    if (!visited.has(neighbor)) {
+      findNavigationPath(navs, neighbor, visited, path.slice(), longestPath);
+    }
+  }
+
+  if (path.length > longestPath.length) {
+    longestPath.splice(0, longestPath.length, ...path);
+  }
+  return longestPath;
 }
