@@ -10,7 +10,6 @@ program.parse(process.argv);
 const options = program.opts();
 
 // TODOs:
-// find the one file that doesn't get navigated to: ie for all the file names the one that doesn't show up in any of the lists of the map
 // given that root file use as the root for the graph and build the graph
 // traverse the graph and print it
 
@@ -33,6 +32,9 @@ async function main(directoryPath: string) {
 
   const navs = await findAllNavigates(files, nav2file);
   console.log(navs);
+
+  const roots = findRoots(navs);
+  console.log("ROOTS: ", roots);
 }
 
 main(options.directory || ".");
@@ -57,13 +59,14 @@ async function generateMapNavigationName2ComponentName(
   for (const file of files) {
     const fileContent = await fs.readFile(file, { encoding: "utf8" });
     let match;
+    // options={{ headerShown: false }}
     const regexPattern =
-      /.*(Stack\.Screen)\s+name="([a-zA-Z0-9_]+)"\s+component=\{([a-zA-Z0-9_]+)\}/g;
+      /.*(Stack\.Screen)\s+name="([a-zA-Z0-9_]+)"\s?(options=.*)?\s+component=\{([a-zA-Z0-9_]+)\}/g;
     do {
       match = regexPattern.exec(fileContent);
       if (match) {
         const navigationName = match[2];
-        const componentName = match[3];
+        const componentName = match[4];
         navigationName2Component.set(navigationName, componentName);
       }
     } while (match);
@@ -118,7 +121,7 @@ async function findAllNavigates(
   for (const file of files) {
     const fileContent = await fs.readFile(file, { encoding: "utf8" });
     let match;
-    const regexPattern = /(navigate|replace)\('([^']+)'\)/g;
+    const regexPattern = /(navigate|replace)\('([a-zA-Z0-9_]+)'\)/g;
     while ((match = regexPattern.exec(fileContent)) !== null) {
       const navigationToFiles = file2file.get(path.basename(file)) ?? [];
       if (match) {
@@ -138,3 +141,17 @@ type Node = {
   name: string;
   neighbour: Node[];
 };
+function findRoots(navs: Map<string, string[]>): string[] {
+  const roots: string[] = [];
+  const allLeaves: string[] = Array.from(navs.values()).reduce(
+    (accumulator, currentValue) => accumulator.concat(currentValue),
+    [],
+  );
+
+  for (const nav of navs.keys()) {
+    if (!allLeaves.includes(nav)) {
+      roots.push(nav);
+    }
+  }
+  return roots;
+}
