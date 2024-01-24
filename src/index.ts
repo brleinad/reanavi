@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import * as fs from "fs/promises";
 import * as path from "path";
 import { Command } from "@commander-js/extra-typings";
@@ -39,7 +41,7 @@ async function main(directoryPath: string) {
   // const graphs = [];
   for (const root of roots) {
     // graphs.push(buildGraph(root));
-    const path = findNavigationPath(navs, root, new Set());
+    const path = findLongestNavigationPath(navs, root, new Set());
     console.log("Path:", path.join(" \n  -> "));
   }
   // console.log("GRAPHS:", graphs);
@@ -159,7 +161,7 @@ function findRoots(navs: Map<string, string[]>): string[] {
   return roots;
 }
 
-function findNavigationPath(
+function findLongestNavigationPath(
   navs: Map<string, string[]>,
   start: string,
   visited: Set<string>,
@@ -172,7 +174,13 @@ function findNavigationPath(
   const neighbors = navs.get(start) || [];
   for (const neighbor of neighbors) {
     if (!visited.has(neighbor)) {
-      findNavigationPath(navs, neighbor, visited, path.slice(), longestPath);
+      findLongestNavigationPath(
+        navs,
+        neighbor,
+        visited,
+        path.slice(),
+        longestPath,
+      );
     }
   }
 
